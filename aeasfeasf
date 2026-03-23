@@ -1,0 +1,506 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <meta name="theme-color" content="#000000" />
+  <title>Premium Video Player</title>
+
+  <script src="https://cdn.fluidplayer.com/v3/current/fluidplayer.min.js"></script>
+
+  <style>
+    :root{
+      --bg:#000000;
+      --panel:rgba(18,18,18,.92);
+      --line:rgba(255,255,255,.08);
+      --text:#ffffff;
+      --muted:rgba(255,255,255,.68);
+      --shadow:0 24px 70px rgba(0,0,0,.45);
+      --safe-top:env(safe-area-inset-top, 0px);
+      --safe-bottom:env(safe-area-inset-bottom, 0px);
+    }
+
+    *{
+      box-sizing:border-box;
+      -webkit-tap-highlight-color:transparent;
+    }
+
+    html, body{
+      margin:0;
+      width:100%;
+      height:100%;
+      overflow:hidden;
+      background:#000;
+      color:var(--text);
+      font-family:Arial, Helvetica, sans-serif;
+    }
+
+    body{
+      background:
+        radial-gradient(circle at top left, rgba(255,255,255,.05), transparent 24%),
+        radial-gradient(circle at bottom right, rgba(255,255,255,.04), transparent 20%),
+        linear-gradient(180deg, #080808, #000000);
+    }
+
+    .app{
+      position:fixed;
+      inset:0;
+      padding:
+        calc(10px + var(--safe-top))
+        10px
+        calc(10px + var(--safe-bottom))
+        10px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+    }
+
+    .shell{
+      position:relative;
+      width:100%;
+      height:100%;
+      overflow:hidden;
+      border-radius:24px;
+      background:linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.015));
+      border:1px solid var(--line);
+      box-shadow:var(--shadow);
+    }
+
+    .topbar{
+      position:absolute;
+      top:0;
+      left:0;
+      right:0;
+      z-index:30;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      padding:14px 16px;
+      background:linear-gradient(to bottom, rgba(0,0,0,.58), rgba(0,0,0,0));
+      pointer-events:none;
+    }
+
+    .brand{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      min-width:0;
+    }
+
+    .dot{
+      width:10px;
+      height:10px;
+      border-radius:50%;
+      background:#fff;
+      box-shadow:0 0 16px rgba(255,255,255,.45);
+      flex:0 0 auto;
+    }
+
+    .brand-copy{
+      min-width:0;
+    }
+
+    .brand-title{
+      font-size:14px;
+      font-weight:700;
+      letter-spacing:.2px;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+
+    .brand-sub{
+      margin-top:2px;
+      font-size:12px;
+      color:var(--muted);
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+
+    .pill{
+      flex:0 0 auto;
+      border:1px solid rgba(255,255,255,.1);
+      background:rgba(255,255,255,.06);
+      padding:8px 10px;
+      border-radius:999px;
+      font-size:12px;
+      font-weight:700;
+      color:#fff;
+    }
+
+    .stage{
+      position:absolute;
+      inset:0;
+      background:#000;
+    }
+
+    .video-wrap{
+      position:relative;
+      width:100%;
+      height:100%;
+      background:#000;
+      overflow:hidden;
+    }
+
+    video{
+      width:100% !important;
+      height:100% !important;
+      object-fit:contain;
+      background:#000;
+    }
+
+    .blur-layer{
+      position:absolute;
+      inset:0;
+      z-index:8;
+      opacity:1;
+      visibility:visible;
+      pointer-events:none;
+      transition:opacity .25s ease, visibility .25s ease;
+      background:
+        linear-gradient(rgba(0,0,0,.32), rgba(0,0,0,.32)),
+        inherit;
+      backdrop-filter:blur(18px);
+      -webkit-backdrop-filter:blur(18px);
+    }
+
+    .blur-layer.hidden{
+      opacity:0;
+      visibility:hidden;
+    }
+
+    .center-overlay{
+      position:absolute;
+      inset:0;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:18px;
+      pointer-events:none;
+      z-index:10;
+    }
+
+    .welcome{
+      max-width:min(92vw, 520px);
+      padding:22px 20px;
+      text-align:center;
+      border-radius:20px;
+      border:1px solid rgba(255,255,255,.08);
+      background:rgba(15,15,15,.60);
+      box-shadow:0 20px 40px rgba(0,0,0,.35);
+      transition:opacity .28s ease, transform .28s ease, visibility .28s ease;
+    }
+
+    .welcome.hide{
+      opacity:0;
+      transform:translateY(10px);
+      visibility:hidden;
+    }
+
+    .welcome h1{
+      margin:0 0 8px;
+      font-size:22px;
+      line-height:1.2;
+    }
+
+    .welcome p{
+      margin:0;
+      color:var(--muted);
+      font-size:14px;
+      line-height:1.55;
+    }
+
+    .bottom-wrap{
+      position:absolute;
+      left:0;
+      right:0;
+      bottom:0;
+      z-index:20;
+      padding:12px 10px;
+      background:linear-gradient(to top, rgba(0,0,0,.78), rgba(0,0,0,0));
+      pointer-events:none;
+    }
+
+    .banner{
+      display:none;
+      justify-content:center;
+      width:100%;
+      pointer-events:auto;
+    }
+
+    .banner.show{
+      display:flex;
+    }
+
+    .banner-box{
+      width:320px;
+      height:50px;
+      max-width:100%;
+      border-radius:10px;
+      border:1px solid rgba(255,255,255,.08);
+      background:var(--panel);
+      color:#bfbfbf;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      text-align:center;
+      font-size:13px;
+      overflow:hidden;
+    }
+
+    .debug{
+      position:absolute;
+      left:12px;
+      bottom:74px;
+      z-index:30;
+      max-width:min(88vw, 560px);
+      display:none;
+      padding:10px 12px;
+      border-radius:14px;
+      border:1px solid rgba(255,255,255,.08);
+      background:rgba(18,18,18,.92);
+      color:#fff;
+      font-size:12px;
+      line-height:1.45;
+      white-space:pre-wrap;
+      word-break:break-word;
+    }
+
+    .debug.show{
+      display:block;
+    }
+
+    @media (max-width:768px){
+      .app{
+        padding:0;
+      }
+
+      .shell{
+        border:none;
+        border-radius:0;
+      }
+
+      .topbar{
+        padding:12px;
+      }
+
+      .brand-title{
+        font-size:13px;
+      }
+
+      .brand-sub,
+      .pill{
+        font-size:11px;
+      }
+
+      .welcome{
+        padding:18px 16px;
+        border-radius:18px;
+      }
+
+      .welcome h1{
+        font-size:19px;
+      }
+
+      .welcome p{
+        font-size:13px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="shell">
+      <div class="topbar">
+        <div class="brand">
+          <div class="dot"></div>
+          <div class="brand-copy">
+            <div class="brand-title">Premium Video Player</div>
+            <div class="brand-sub" id="brandSub">Preparing video source...</div>
+          </div>
+        </div>
+        <div class="pill" id="statusPill">Standby</div>
+      </div>
+
+      <div class="stage">
+        <div class="video-wrap">
+          <video
+            id="video-player"
+            playsinline
+            webkit-playsinline
+            controls
+            preload="metadata"
+            controlsList="nodownload noplaybackrate"
+            disablepictureinpicture
+          ></video>
+
+          <div class="blur-layer" id="blurLayer"></div>
+
+          <div class="center-overlay">
+            <div class="welcome" id="welcomeBox">
+              <h1>Ready to play</h1>
+              <p>
+                Autoplay is disabled. Press play to start the video.
+                The 320x50 banner will appear after playback begins.
+              </p>
+            </div>
+          </div>
+
+          <div class="bottom-wrap">
+            <div class="banner" id="banner">
+              <div class="banner-box">
+                320 x 50 Banner Space
+              </div>
+            </div>
+          </div>
+
+          <div class="debug" id="debugBox"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      const video = document.getElementById("video-player");
+      const brandSub = document.getElementById("brandSub");
+      const statusPill = document.getElementById("statusPill");
+      const banner = document.getElementById("banner");
+      const welcomeBox = document.getElementById("welcomeBox");
+      const blurLayer = document.getElementById("blurLayer");
+      const debugBox = document.getElementById("debugBox");
+
+      const params = new URLSearchParams(window.location.search);
+      const rawId = (params.get("id") || params.get("idvideo") || "").trim();
+
+      function sanitizeId(id) {
+        return id.replace(/[^a-zA-Z0-9]/g, "");
+      }
+
+      function setStatus(title, subtitle) {
+        statusPill.textContent = title;
+        brandSub.textContent = subtitle;
+      }
+
+      function showDebug(message) {
+        debugBox.textContent = message;
+        debugBox.classList.add("show");
+      }
+
+      function hideDebug() {
+        debugBox.classList.remove("show");
+        debugBox.textContent = "";
+      }
+
+      function cleanAddressBar() {
+        if (window.history && window.history.replaceState) {
+          window.history.replaceState({}, document.title, window.location.pathname);
+        }
+      }
+
+      function showBlur() {
+        blurLayer.classList.remove("hidden");
+      }
+
+      function hideBlur() {
+        blurLayer.classList.add("hidden");
+      }
+
+      const videoId = sanitizeId(rawId);
+
+      if (!videoId) {
+        setStatus("Error", "Video ID was not found");
+        showDebug("Use a URL like: /v?id=MZtNQJnP1");
+        showBlur();
+        return;
+      }
+
+      const sourceUrl = "https://cdn.slicedrive.com/" + videoId + ".mp4";
+
+      const source = document.createElement("source");
+      source.src = sourceUrl;
+      source.type = "video/mp4";
+      video.appendChild(source);
+
+      cleanAddressBar();
+
+      fluidPlayer("video-player", {
+        layoutControls: {
+          primaryColor: "#ffffff",
+          autoPlay: false,
+          mute: false,
+          allowDownload: false,
+          allowTheatre: false,
+          playbackRateEnabled: false,
+          playButtonShowing: true,
+          fillToContainer: true,
+          posterImage: "",
+          controlBar: {
+            autoHide: true,
+            autoHideTimeout: 3,
+            animated: true
+          },
+          htmlOnPauseBlock: {
+            html: null,
+            height: null,
+            width: null
+          }
+        },
+        vastOptions: {
+          adList: []
+        }
+      });
+
+      video.load();
+      showBlur();
+      setStatus("Loading", "Connecting to video source...");
+
+      video.addEventListener("loadedmetadata", function () {
+        hideDebug();
+        setStatus("Ready", "Video is ready to play");
+        showBlur();
+      });
+
+      video.addEventListener("canplay", function () {
+        setStatus("Ready", "Press play to start");
+        showBlur();
+      });
+
+      function handlePlay() {
+        welcomeBox.classList.add("hide");
+        banner.classList.add("show");
+        hideBlur();
+        setStatus("Playing", "Video is now playing");
+      }
+
+      function handlePause() {
+        showBlur();
+        setStatus("Paused", "Video is paused");
+      }
+
+      video.addEventListener("play", handlePlay, { passive: true });
+      video.addEventListener("playing", handlePlay, { passive: true });
+      video.addEventListener("pause", handlePause, { passive: true });
+
+      video.addEventListener("ended", function () {
+        showBlur();
+        setStatus("Ended", "Playback has finished");
+      }, { passive: true });
+
+      video.addEventListener("error", function () {
+        showBlur();
+        setStatus("Error", "Unable to load the video");
+        showDebug("The video could not be loaded. Check whether the ID is correct and whether the file is publicly accessible.");
+      });
+
+      window.addEventListener("orientationchange", function () {
+        setTimeout(function () {
+          window.scrollTo(0, 0);
+        }, 80);
+      }, { passive: true });
+    })();
+  </script>
+</body>
+</html>
